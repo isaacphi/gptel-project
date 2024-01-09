@@ -1,0 +1,23 @@
+# Compiled files
+*.elc
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cask dependencies
+.cask/
+
+# Auto-generated TAGS files
+TAGS
+
+# Project-local backup files
+*~
+
+# Project-local backup and autosave files
+\#*\#
+.\#*
+
+# Ignore .chats directory
+.chats/

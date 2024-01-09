@@ -43,26 +43,31 @@
     ;; Within the buffer, start inserting the content.
     (with-current-buffer gptel-buffer
       (insert "* Project Name:" (projectile-project-name) "\n")
+      (insert "You will be provided with the full text of files in a software projet. You are to act as a helpful software engineer, providing concise answers about this project.")
       (insert "** Files:\n")
       (let ((project-files (projectile-project-files (projectile-project-root))))
         (dolist (file project-files)
           (let ((file-type (file-name-extension file)))
             (insert "*** " file "\n")
-            (insert "#+BEGIN_SRC " (or (car (rassoc file-type org-babel-tangle-lang-exts)) "text") "\n")
             (condition-case err
-                (insert (with-temp-buffer
-                          (insert-file-contents (expand-file-name file (projectile-project-root)))
-                          (buffer-string)))
+                (progn
+                  (insert "#+BEGIN_SRC " (or (car (rassoc file-type org-babel-tangle-lang-exts)) "text") "\n")
+                  (insert (with-temp-buffer
+                            (insert-file-contents (expand-file-name file (projectile-project-root)))
+                            (buffer-string)))
+                  (insert "#+END_SRC\n\n"))
               (error (insert "Error: Could not load the file contents. " (error-message-string err) "\n")))
-            (insert "#+END_SRC\n\n")))))
-    ;; After the file list, prepare the buffer for chat input from the user.
-    (insert (gptel-prompt-prefix-string))
-    (goto-char (point-max))) ;; Move the cursor to the end of the buffer.
+            )))
+      ;; After the file list, prepare the buffer for chat input from the user.
+      (insert (gptel-prompt-prefix-string))
+      ;; Ask the AI to summarize each file
+      (insert "Following the same heading format as above, summarize each file. More Important files should have longer summaries but none should be more than a couple of paragraphs. Keep them as sort as possible. Also summarize the interface of each file at the bottom: what are the important functions and constants?")
+      (goto-char (point-max))) ;; Move the cursor to the end of the buffer.
 
-  ;; Finally, display the newly populated buffer to the user.
-  (pop-to-buffer gptel-buffer))
+    ;; Finally, display the newly populated buffer to the user.
+    (pop-to-buffer gptel-buffer)))
 
 
-(provide 'gptel-project)
+  (provide 'gptel-project)
 
 ;;; gptel-project.el ends here
