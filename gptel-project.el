@@ -29,7 +29,9 @@
         (progn
           (pop-to-buffer buffer)
           (goto-char (point-max))
-          (return))
+          ;; TEMPORARY: always go to this buffer and clear it
+          (erase-buffer))
+      ;; (return))
       ;; Else, create the buffer.
       (setq gptel-buffer (get-buffer-create buffer-name))
       (with-current-buffer gptel-buffer
@@ -40,16 +42,22 @@
   (when (buffer-live-p gptel-buffer)
     ;; Within the buffer, start inserting the content.
     (with-current-buffer gptel-buffer
-      (insert (concat "* " (projectile-project-name) "\n"))
-      (insert (concat "** Files\n"))
-      ;; (projectile-project-unignored-files)
+      (insert "* Project Name:" (projectile-project-name) "\n")
+      (insert "** Files:\n")
       (let ((project-files (projectile-project-files (projectile-project-root))))
         (dolist (file project-files)
-          (insert "- " file "\n")))
-
-      ;; After the file list, prepare the buffer for chat input from the user.
-      (insert (gptel-prompt-prefix-string))
-      (goto-char (point-max)))) ;; Move the cursor to the end of the buffer.
+          (let ((file-type (file-name-extension file)))
+            (insert "*** " file "\n")
+            (insert "#+BEGIN_SRC " (or (car (rassoc file-type org-babel-tangle-lang-exts)) "text") "\n")
+            (condition-case err
+                (insert (with-temp-buffer
+                          (insert-file-contents (expand-file-name file (projectile-project-root)))
+                          (buffer-string)))
+              (error (insert "Error: Could not load the file contents. " (error-message-string err) "\n")))
+            (insert "#+END_SRC\n\n")))))
+    ;; After the file list, prepare the buffer for chat input from the user.
+    (insert (gptel-prompt-prefix-string))
+    (goto-char (point-max))) ;; Move the cursor to the end of the buffer.
 
   ;; Finally, display the newly populated buffer to the user.
   (pop-to-buffer gptel-buffer))
