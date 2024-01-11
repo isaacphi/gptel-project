@@ -3,6 +3,7 @@
 ;; Author: isaacphi <your-email@example.com>
 ;; Version: 0.1.0
 ;; Keywords: convenience, ai
+;; Package-Requires ((emacs "26.1"))
 ;; URL: http://github.com/isaacphi/gptel-project
 
 ;;; Commentary:
@@ -43,31 +44,39 @@
     ;; Within the buffer, start inserting the content.
     (with-current-buffer gptel-buffer
       (insert "* Project Name:" (projectile-project-name) "\n")
-      (insert "You will be provided with the full text of files in a software projet. You are to act as a helpful software engineer, providing concise answers about this project.")
+      (insert "You will be provided with the full text of files in a software projet. You are to act as a helpful software engineer, providing concise answers about this project.\n")
       (insert "** Files:\n")
       (let ((project-files (projectile-project-files (projectile-project-root))))
         (dolist (file project-files)
           (let ((file-type (file-name-extension file)))
             (insert "*** " file "\n")
             (condition-case err
-                (progn
-                  (insert "#+BEGIN_SRC " (or (car (rassoc file-type org-babel-tangle-lang-exts)) "text") "\n")
-                  (insert (with-temp-buffer
-                            (insert-file-contents (expand-file-name file (projectile-project-root)))
-                            (buffer-string)))
-                  (insert "#+END_SRC\n\n"))
+                ;; TODO: use list of files other than org-babel-tangle-lang-exts
+                (if (member file-type (mapcar 'cdr org-babel-tangle-lang-exts))
+                    (progn
+                      (insert "#+BEGIN_SRC " (or (car (rassoc file-type org-babel-tangle-lang-exts)) "text") "\n")
+                      (let ((file-contents (with-temp-buffer
+                                (insert-file-contents (expand-file-name file (projectile-project-root)))
+                                (buffer-string))))
+                        (if (string= file-type "org")
+                            (insert (replace-regexp-in-string "^\*" ",\*" file-contents))
+                          (insert file-contents)))
+                      ;; (insert (with-temp-buffer
+                      ;;           (insert-file-contents (expand-file-name file (projectile-project-root)))
+                      ;;           (buffer-string)))
+                      (insert "#+END_SRC\n\n")))
               (error (insert "Error: Could not load the file contents. " (error-message-string err) "\n")))
             )))
       ;; After the file list, prepare the buffer for chat input from the user.
       (insert (gptel-prompt-prefix-string))
       ;; Ask the AI to summarize each file
-      (insert "Following the same heading format as above, summarize each file. More Important files should have longer summaries but none should be more than a couple of paragraphs. Keep them as sort as possible. Also summarize the interface of each file at the bottom: what are the important functions and constants?")
+      (insert "Following the same heading format as above, summarize each file. More Important files should have longer summaries but none should be more than a couple of paragraphs. Keep them as sort as possible. Also summarize the interface of each file at the bottom: what are the important functions and constants? ")
       (goto-char (point-max))) ;; Move the cursor to the end of the buffer.
 
     ;; Finally, display the newly populated buffer to the user.
     (pop-to-buffer gptel-buffer)))
 
 
-  (provide 'gptel-project)
+(provide 'gptel-project)
 
 ;;; gptel-project.el ends here
